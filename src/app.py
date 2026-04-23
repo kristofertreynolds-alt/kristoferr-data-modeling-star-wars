@@ -8,7 +8,8 @@ from flask_swagger import swagger
 from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
-from models import db, User
+from models import db, User, Character, Planet, Favorite
+from sqlalchemy import select
 #from models import Person
 
 app = Flask(__name__)
@@ -36,6 +37,7 @@ def handle_invalid_usage(error):
 def sitemap():
     return generate_sitemap(app)
 
+
 @app.route('/user', methods=['GET'])
 def handle_hello():
 
@@ -44,6 +46,50 @@ def handle_hello():
     }
 
     return jsonify(response_body), 200
+
+
+# Select all people from database
+@app.route("/people")
+def get_all_characters():
+    statement = (
+        select(Character)
+    )
+    characters = db.session.execute(statement).scalars().all()
+    character_dictionaries = []
+    for character in characters:
+        dictionary = character.serialize()
+        character_dictionaries.append(dictionary)
+    
+    print(character_dictionaries)
+    return jsonify(character_dictionaries), 200
+
+
+@app.route("/people/<int:person_id>")
+def get_one_character(person_id: int):
+    statement = (
+        select(Character)
+        .where(Character.id==person_id)
+    )
+    character = db.session.execute(statement).scalar_one_or_none()
+    if not character: #is character none?
+        return jsonify({"message": "character not found"}), 404
+    return jsonify(character.full_serialize()), 200
+
+
+# Select all planets from database
+@app.route("/planets")
+def get_all_planets():
+    statement = (
+        select(Planet)
+    )
+    planets = db.session.execute(statement).scalars().all()
+    planet_dictionaries = [planet.serialize() for planet in planets]
+    # for planet in planets:
+    #     dictionary = planet.serialize()
+    #     planet_dictionaries.append(dictionary) 
+    # print(planet_dictionaries)
+    return jsonify(planet_dictionaries), 200
+
 
 # this only runs if `$ python src/app.py` is executed
 if __name__ == '__main__':

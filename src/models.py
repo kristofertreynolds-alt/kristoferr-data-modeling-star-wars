@@ -9,19 +9,24 @@ class User(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
     password: Mapped[str] = mapped_column(nullable=False)
-
-    # def serialize(self):
-    #     return {
-    #         "id": self.id,
-    #         "email": self.email,
-    #         # do not serialize the password, its a security breach
-    #     }
+    def serialize(self):
+        return {
+            "id": self.id,
+            "email": self.email,
+            # do not serialize the password, its a security breach
+        }
     
 
 class Item(db.Model):
     __abstract__ = True
     name: Mapped[str] = mapped_column(unique=True)
     url: Mapped[str] = mapped_column(unique=True)
+    def serialize(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "url": self.url,
+        }
 
 
 class Character(Item): 
@@ -31,6 +36,15 @@ class Character(Item):
     skin_color: Mapped[str] = mapped_column(nullable=True)
     height: Mapped[str] = mapped_column(nullable=True)
 
+    def full_serialize(self):
+        base_dictionary = super().serialize()
+        base_dictionary.update({
+            "hair_color": self.hair_color,
+            "eye_color": self.eye_color,
+            "skin_color": self.height,
+            "height": self.height
+        })
+        return base_dictionary
 
 class Planet(Item): 
     id: Mapped[int] = mapped_column(primary_key=True)
