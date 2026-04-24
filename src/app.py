@@ -48,7 +48,7 @@ def handle_hello():
     return jsonify(response_body), 200
 
 
-# Select all people from database
+# PEOPLE
 @app.route("/people")
 def get_all_characters():
     statement = (
@@ -64,6 +64,9 @@ def get_all_characters():
     return jsonify(character_dictionaries), 200
 
 
+
+
+# PEOPLE 1,2,3
 @app.route("/people/<int:person_id>")
 def get_one_character(person_id: int):
     statement = (
@@ -76,7 +79,85 @@ def get_one_character(person_id: int):
     return jsonify(character.full_serialize()), 200
 
 
-# Select all planets from database
+
+
+# USERS
+@app.route("/users")
+def get_users():
+    users = db.session.execute(select(User)).scalars().all()
+    user_dictionaries = [user.serialize() for user in users]
+    return jsonify(user_dictionaries), 200
+
+
+
+
+
+@app.route("/users/favorites") #/users/favorites?user_id=5
+def get_favorites_for_user_in_query_string():
+    query_params = request.args
+    favorites = db.session.execute(
+        select(Favorite)
+        .where(Favorite.user_id == query_params.get("user_id"))
+    ).scalars().all()
+    favorite_dictionaries = [favorite.serialize() for favorite in favorites]
+    return jsonify(favorite_dictionaries), 200
+
+
+
+
+@app.route("/users/<int:user_id>/favorites/<int:favorite_id>", methods=["DELETE"])
+def delete_a_favorite(user_id, favorite_id):
+    favorite = db.session.execute(
+        select(Favorite)
+        .where(
+            Favorite.user_id == user_id,
+            Favorite.id == favorite_id
+        )
+    ).scalars().one_or_none()
+    if favorite:
+        db.session.delete(favorite)
+        db.session.commit()
+    return "", 204
+
+
+# FAVORITES
+@app.route("/favorites/people/<int:person_id>", methods=["POST"])
+def add_person_as_favorite(person_id): 
+    body = request.json
+    user_id = body.get("user_id")
+    if not user_id:
+        return jsonify(dict(message="a user id is required!")), 400
+    user = db.session.execute(select(User).where(User.id == user_id)).scalar_one_or_none()
+    if not user: 
+        return jsonify(dict(message="no such user")), 400
+    person = db.session.execute(select(Character).where(Character.id==person_id)).scalar_one_or_none()
+    if not person:
+        return jsonify(dict(message="no such character")), 400
+    already_exists = db.session.execute(
+        select(Favorite)
+        .where(
+            Favorite.planet_id == None,
+            Favorite.character_id == person.id,
+            Favorite.user_id == user.id
+        )
+    ).scalar_one_or_none()
+    if already_exists:
+        return jsonify(dict(message="this character is already your favorite")), 400
+    favorite = Favorite(
+        user_id = user.id,
+        character_id = person.id,
+        planet_id= None
+    )
+    db.session.add(favorite)
+    try:
+        db.session.commit()
+    except Exception as error:
+        return jsonify(error.__dict__())
+    favorite_dictionary = favorite.serialize()
+    return jsonify(favorite_dictionary), 201
+
+
+# PLANETS
 @app.route("/planets")
 def get_all_planets():
     statement = (
@@ -89,6 +170,9 @@ def get_all_planets():
     #     planet_dictionaries.append(dictionary) 
     # print(planet_dictionaries)
     return jsonify(planet_dictionaries), 200
+
+
+
 
 
 # this only runs if `$ python src/app.py` is executed

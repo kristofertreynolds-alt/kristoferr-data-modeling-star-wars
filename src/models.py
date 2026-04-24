@@ -62,6 +62,14 @@ class Favorite(db.Model):
     character_id: Mapped[int] = mapped_column(ForeignKey("character.id"), nullable=True)
     planet_id: Mapped[int] = mapped_column(ForeignKey("planet.id"), nullable=True)
 
+    def serialize(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "character_id": self.character_id,
+            "planet_id": self.planet_id
+        }
+
 
 # class Post(db.Model):
 #     id: Mapped[int] = mapped_column(primary_key=True)
